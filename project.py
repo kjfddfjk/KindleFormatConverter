@@ -9,6 +9,7 @@ from tkinter import ttk
 from tkinter import dialog
 from tkinter import messagebox
 from collections import OrderedDict
+from collections import deque
 from PIL import Image, ImageTk
 
 # GLOBAL VARIBALES
@@ -18,8 +19,12 @@ iconW = 24 * scale
 iconH = 24 * scale
 canX = 300
 canY = 400
-path = ''
+runningPath = os.path.split(os.path.realpath(__file__))[0]
+textPath = ''
+imagesDir = ''
 tkImg = ''
+imagesListRecord = deque()
+recordNumber = 0
 imagesList = []
 messages = ''
 
@@ -27,11 +32,11 @@ messages = ''
 class App:
     def __init__(self, master):
         self.master = master
-        self.initWidgets()
+        self.InitWidgets()
 
-    def initWidgets(self):
+    def InitWidgets(self):
         # Initial icons
-        self.init_icons()
+        self.InitIcons()
 
         self.tabControl = ttk.Notebook(
             self.master)          # Create Tab Control
@@ -40,16 +45,28 @@ class App:
         self.tabControl.pack(side=tk.TOP, fill="both", expand=tk.YES,
                              padx=5, pady=5, ipady=5)  # Pack to make visible
         self.messageLabel.pack(side=tk.RIGHT, fill=tk.X, expand=tk.NO)
-        self.initTextTab(self.tabControl)
-        self.initImageTab(self.tabControl)
-        self.initSettingTab(self.tabControl)
+        self.InitTextTab(self.tabControl)
+        self.InitImageTab(self.tabControl)
+        self.InitSettingTab(self.tabControl)
 
-    def initTextTab(self, tabControl):
+    def InitTextTab(self, tabControl):
         textTab = ttk.Frame(tabControl)
-        tabControl.add(textTab, text='Text',
-                       image=self.master.icons["novel_icon"], compound=tk.LEFT)
+        textTab.pack(fill=tk.BOTH, ipadx=5, ipady=5)
+        tabControl.add(textTab, text='Text', image=self.master.icons["novel_icon"], compound=tk.LEFT)
 
-    def initImageTab(self, tabControl):
+        chooseFileButton = tk.Button(textTab, text='Choose text')
+        chooseFileButton.pack(side=tk.LEFT)
+
+        textVar = tk.StringVar(value='Please choose file')
+        textPathEntry = tk.Entry(textTab, textvar=textVar)
+        chooseFileButton.bind("<1>", lambda event, entry=textPathEntry ,textVar=textVar: ChooseFile(entry, textVar))
+        textPathEntry.pack(side=tk.LEFT, ipadx=80)
+
+        confirmConvertButton = tk.Button(textTab, text="Confirm Convert")
+        confirmConvertButton.bind("<1>", lambda event, textEntry=textPathEntry: self.ConvertText(textEntry))
+        confirmConvertButton.pack(side=tk.LEFT)
+
+    def InitImageTab(self, tabControl):
         global imagesList
         imgTab = ttk.Frame(tabControl)
         tabControl.add(imgTab, text='Comic',
@@ -84,44 +101,46 @@ class App:
         tkImg = ImgTkResize('', (canX, canY))
         imageCanvas.create_text(canX/2, canY/2, text="Image Preview")
         imageCanvas.create_image(canX/2, canY/2, image=tkImg)
-        imageListbox.bind("<Button-1>", lambda event, lb=imageListbox, cn=imageCanvas: self.showImageFromList(lb, cn))
+        imageListbox.bind("<Button-1>", lambda event, lb=imageListbox, cn=imageCanvas: self.ShowImageFromList(lb, cn))
 
         bottomFrame = tk.Frame(rightFrame)
         bottomFrame.pack(side=tk.BOTTOM, fill="both", expand=tk.NO)
 
         deleteButton = tk.Button(rightFrame, text='Delete')
-        deleteButton.bind("<Button-1>", lambda event, lb=imageListbox, lv=listVar: self.imageDelete(lb,lv))
+        deleteButton.bind("<Button-1>", lambda event, lb=imageListbox, lv=listVar: self.ImageDelete(lb,lv))
         deleteButton.pack(side=tk.LEFT)
         
-        convertButton = tk.Button(rightFrame, text='Convert', command=imageConvertToMobi)
+        convertButton = tk.Button(rightFrame, text='Convert')
+        convertButton.bind('<ButtonPress-1>', lambda event, listvar=listVar, canvas=imageCanvas: self.ImagesConvert(listvar, canvas))
         convertButton.pack(side=tk.LEFT)
     
+    # Clear images tab
     def ClearList(self, listvariable, canvas):
         global imagesList
-        imagesList.pop[:]
+        imagesList= []
         listvariable.set(imagesList)
-        canvas.create_image(image='')
+        canvas.create_image(0, 0, image='')
 
-    def initSettingTab(self, tabControl):
+    def InitSettingTab(self, tabControl):
         setTab = ttk.Frame(tabControl)
         tabControl.add(setTab, text='Settings',
                        image=self.master.icons["setting_icon"], compound=tk.LEFT)
 
     # # 生成所有需要的图标
-    def init_icons(self):
+    def InitIcons(self):
         self.master.icons = {}
-        self.master.icons["novel_icon"] = ImgTkResize('images/novel.png')
-        self.master.icons["image_icon"] = ImgTkResize('images/image.png')
-        self.master.icons["setting_icon"] = ImgTkResize('images/globe.png')
+        self.master.icons["novel_icon"] = ImgTkResize(os.path.join(runningPath, 'images/novel.png'))
+        self.master.icons["image_icon"] = ImgTkResize(os.path.join(runningPath, 'images/image.png'))
+        self.master.icons["setting_icon"] = ImgTkResize(os.path.join(runningPath, 'images/globe.png'))
     # 生成工具条
 
     def ListImages(self, listVar):
-        global path, imagesList
-        path = filedialog.askdirectory()
-        if(path == ''):
+        global imagesDir, imagesList
+        imagesDir = filedialog.askdirectory()
+        if(imagesDir == ''):
             return None
-        _path = tk.StringVar(value=path)
-        listFiles = os.listdir(path)
+        _path = tk.StringVar(value=imagesDir)
+        listFiles = os.listdir(imagesDir)
         if listFiles == "":
             return None
         imagesList = []
@@ -132,7 +151,7 @@ class App:
                 imagesList.append(name)
         listVar.set(imagesList)
 
-    def imageDelete(self, listbox, listvariable):
+    def ImageDelete(self, listbox, listvariable):
         select = listbox.curselection()
         if(select == ()):
             return None
@@ -141,23 +160,41 @@ class App:
         for element in select:
             imagesList.pop(element)
             temp = listbox.get(select)
-            print(temp + " has been deleted.")
+            print(temp + " has been removed.")
         listvariable.set(imagesList)
 
-    def showImageFromList(self, listbox, canvas):
+    def ShowImageFromList(self, listbox, canvas):
         index = listbox.curselection()
         if(index == ()):
             return
-        global tkImg, imagesList, path
-        directory = path + '/' + imagesList[index[0]]
+        global tkImg, imagesList, imagesDir
+        directory = imagesDir + '/' + imagesList[index[0]]
         tkImg = ImgTkResize(directory, (canX, canY))
         canvas.create_image(canX/2, canY/2, image=tkImg)
+    
+    def ImagesConvert(self, listVar, canvas):
+        ImagesConvertToMobi()
+        self.ClearList(listVar, canvas)
+    
+    def ConvertText(self, entry):
+        if(entry.get()==''):
+            print("No file can be convert")
+            return None
+        filePath = entry.get()
+        basename = os.path.basename(os.path.splitext(filePath)[0])
+        if(not os.access(textPath, mode=os.R_OK)):
+            # TODO maybe need to 
+            print("Unable to read: %s" % textPath)
+            return None
+        saveName = filedialog.asksaveasfilename(initialfile=basename, filetypes=[("MOBI",".mobi")])
+        if(saveName):
+            os.system('ebook-convert.exe' + ' "' + textPath + '"  "' + saveName + '.mobi"')
         
-
-
-def ListSync(listbox, listVar, strList):
-    listVar.set(strList)
-
+def ChooseFile(entry, filevariable):
+    global textPath
+    textPath = filedialog.askopenfilename(filetypes=[("Supported format",".pdf .epub .txt .doc .docx"),("All Types",".*")])
+    if(textPath):
+        filevariable.set(textPath)
 
 def ImgTkResize(filepath, size=(iconW, iconH)):
     if(not os.path.exists(filepath)):
@@ -177,28 +214,33 @@ def ImgTkResize(filepath, size=(iconW, iconH)):
     # convert PIL image object to Tkinter PhotoImage object
     return ImageTk.PhotoImage(pilImgResized)
 
-def imageConvertToMobi():
-    global imagesList, path
+
+def ImagesConvertToMobi():
+    global imagesList, imagesDir
     if(imagesList == []):
         return None
     imageOpenList = []
-    firstImage = Image.open(path + '/' + imagesList[0])
+    firstImage = Image.open(imagesDir + '/' + imagesList[0])
     firstImage.load()
     firstImage = firstImage.convert('RGB')
     imagesList.pop(0)
     for image in imagesList:
-        imageOpen = Image.open(path + '/' + image)
+        imageOpen = Image.open(imagesDir + '/' + image)
         imageOpen.load()
         if imageOpen.mode == "RGBA":
             imageOpen = imageOpen.convert('RGB')
         imageOpenList.append(imageOpen)
-    fileName = filedialog.asksaveasfilename(initialdir=path, filetypes=[("MOBI", ".mobi")])
+    fileName = filedialog.asksaveasfilename(initialdir=imagesDir, defaultextension=[("MOBI", ".mobi")])
+    # fileName = filedialog.asksaveasfilename(initialdir=path, filetypes=[("MOBI", ".mobi")])
+    if(fileName):
+        # TODO need to restore list
+        return None
+    fileName = fileName + '.mobi'
     fileDir = os.path.dirname(fileName)
     tempFile = '%s.pdf' % os.path.join(tempfile.gettempdir(), str(os.getpid()))
     firstImage.save(tempFile, "PDF", resolution=100.0, save_all=True, append_images=imageOpenList)
-    os.system('ebook-convert.exe' + ' "' + tempFile + '"  "' + fileName + '.mobi"')
+    os.system('ebook-convert.exe' + ' "' + tempFile + '"  "' + fileName + '"')
     os.remove(tempFile)
-    # canvas.delete("all")
 
 root = tk.Tk()
 root.title("Kinapp Testing")
