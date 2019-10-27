@@ -11,7 +11,8 @@ from tkinter import messagebox
 from collections import OrderedDict
 from PIL import Image, ImageTk
 
-from KindleFormatConverter import RecordList
+from modules import DragDrop
+from modules import RecordList
 
 # GLOBAL VARIBALES
 # expect size
@@ -24,20 +25,20 @@ runningPath = os.path.split(os.path.realpath(__file__))[0]
 textPath = ''
 imagesDir = ''
 tkImg = ''
-imagesList = []
 listRecord = RecordList.RecordList()
+imagesList = []
+tempList = []
 recordNumber = 0
 messages = ''
-
 # Window of application
 
 
 class App:
     def __init__(self, master):
         self.master = master
-        self.InitWidgets()
+        self.InitFrames()
 
-    def InitWidgets(self):
+    def InitFrames(self):
         # Initial icons
         self.InitIcons()
 
@@ -51,6 +52,20 @@ class App:
         self.InitTextTab(self.tabControl)
         self.InitImageTab(self.tabControl)
         self.InitSettingTab(self.tabControl)
+
+    def InitIcons(self):
+        self.master.icons = {}
+        self.master.icons["novel_icon"] = ImgTkResize(
+            os.path.join(runningPath, 'images/novel.png'))
+        self.master.icons["image_icon"] = ImgTkResize(
+            os.path.join(runningPath, 'images/image.png'))
+        self.master.icons["setting_icon"] = ImgTkResize(
+            os.path.join(runningPath, 'images/globe.png'))
+        self.master.icons["redo_icon"] = ImgTkResize(
+            os.path.join(runningPath, 'images/redo.png'))
+        self.master.icons["undo_icon"] = ImgTkResize(
+            os.path.join(runningPath, 'images/undo.png'))
+        
 
     def InitTextTab(self, tabControl):
         textTab = ttk.Frame(tabControl)
@@ -78,77 +93,82 @@ class App:
         tabControl.add(imgTab, text='Comic',
                        image=self.master.icons["image_icon"], compound=tk.LEFT)
 
-        # 创建两边的Frame
+        # create frame for two sides
         leftFrame = ttk.Frame(imgTab, width=80)
-        leftFrame.pack(side=tk.LEFT, fill=tk.BOTH, ipadx=5, ipady=5)
+        leftFrame.pack(side=tk.LEFT, fill=tk.BOTH)
         rightFrame = ttk.Frame(imgTab)
-        rightFrame.pack(side=tk.TOP, fill=tk.BOTH, ipadx=5, ipady=5)
+        rightFrame.pack(side=tk.LEFT, fill=tk.BOTH)
+
+        # Devide to 4 parts of frames
+        leftUpFrame = ttk.Frame(leftFrame)
+        leftUpFrame.pack(fill=tk.BOTH, ipadx=5, ipady=5)
+        leftDownFrame = ttk.Frame(leftFrame)
+        leftDownFrame.pack(expand=tk.YES ,fill=tk.BOTH, ipadx=5, ipady=5)
+        rightUpFrame = ttk.Frame(rightFrame)
+        rightUpFrame.pack(expand=tk.YES, fill=tk.BOTH, ipadx=5, ipady=5)
+        rightDownFrame = ttk.Frame(rightFrame)
+        rightDownFrame.pack(fill=tk.BOTH, ipadx=5, ipady=5)
 
         # 左边的Frame
-        directoryButton = tk.Button(leftFrame, text='Import Images')
+        directoryButton = tk.Button(leftUpFrame, text='Import Images')
+        redoButton = tk.Button(leftUpFrame, image=self.master.icons["redo_icon"])
+        undoButton = tk.Button(leftUpFrame, image=self.master.icons["undo_icon"])
         listVar = tk.StringVar()
-        imageListbox = tk.Listbox(leftFrame, font=(
+        imageListbox = DragDrop.DragDropList(leftDownFrame, font=(
             'Courier New', 16), listvariable=listVar)
-        scroll = ttk.Scrollbar(leftFrame)
-        directoryButton.pack(side=tk.TOP, anchor=tk.W, padx=5, pady=5)
-        directoryButton.bind('<ButtonRelease-1>', lambda event,
-                             listVar=listVar: self.ListImages(listVar))
-        # lambda: self.ListImages(event, imageListbox))
-        imageListbox.pack(side=tk.LEFT, fill=tk.Y, expand=tk.YES)
+        scroll = ttk.Scrollbar(leftDownFrame)
+        directoryButton.pack(side=tk.LEFT, anchor=tk.N, padx=5, pady=5)
+        directoryButton.bind('<1>', lambda event,
+                             listVar=listVar, but=directoryButton: self.ListImages(listVar, but))
+        redoButton.bind('<1>', lambda event, listVar=listVar: self.Redo(listVar))
+        undoButton.bind('<1>', lambda event, listVar=listVar: self.Undo(listVar))
+        redoButton.pack(side=tk.RIGHT, anchor=tk.N, padx=5, pady=5)
+        undoButton.pack(side=tk.RIGHT, anchor=tk.N, padx=5, pady=5)
+        imageListbox.pack(side=tk.LEFT, anchor=tk.SW, fill=tk.Y, expand=tk.YES)
         scroll.pack(side=tk.RIGHT, fill=tk.Y)
         # 设置滚动条与label组件关联
         scroll['command'] = imageListbox.yview
         imageListbox.configure(yscrollcommand=scroll.set)
 
         # 右边的Frame,再分上下两个Frame
-        imageCanvas = tk.Canvas(rightFrame, bg="white",
+        imageCanvas = tk.Canvas(rightUpFrame, bg="white",
                                 height=canY, width=canX)
-        imageCanvas.pack(side=tk.TOP, expand=True)
+        imageCanvas.pack(side=tk.BOTTOM, expand=tk.YES)
         global tkImg
         tkImg = ImgTkResize('', (canX, canY))
         imageCanvas.create_text(canX/2, canY/2, text="Image Preview")
         imageCanvas.create_image(canX/2, canY/2, image=tkImg)
-        imageListbox.bind("<Button-1>", lambda event, lb=imageListbox,
+        imageListbox.bind("<Double-Button-1>", lambda event, lb=imageListbox,
                           cn=imageCanvas: self.ShowImageFromList(lb, cn))
-
-        bottomFrame = tk.Frame(rightFrame)
+        imageListbox.bind('<B1-Motion>', lambda event, lb = imageListbox, lv = listVar:self.ShiftSelection(event, lb, lv))
+        imageListbox.bind('<ButtonRelease-1>', lambda event, lv = listVar:self.ListCompare(lv))
+        bottomFrame = tk.Frame(rightDownFrame)
         bottomFrame.pack(side=tk.BOTTOM, fill="both", expand=tk.NO)
 
-        deleteButton = tk.Button(rightFrame, text='Delete')
+        deleteButton = tk.Button(rightDownFrame, text='Delete')
         deleteButton.bind("<Button-1>", lambda event,
-                          lb=imageListbox, lv=listVar: self.ImageDelete(lb, lv))
+                          lb=imageListbox, lv=listVar: self.DeleteSelectImage(lb, lv))
         deleteButton.pack(side=tk.LEFT)
 
-        convertButton = tk.Button(rightFrame, text='Convert')
+        convertButton = tk.Button(rightDownFrame, text='Convert')
         convertButton.bind('<ButtonPress-1>', lambda event, listvar=listVar,
                            canvas=imageCanvas: self.ImagesConvert(listvar, canvas))
         convertButton.pack(side=tk.LEFT)
-
-    # Clear images tab
-    def ClearList(self, listvariable, canvas):
-        global imagesList
-        imagesList = []
-        listvariable.set(imagesList)
-        canvas.create_image(0, 0, image='')
 
     def InitSettingTab(self, tabControl):
         setTab = ttk.Frame(tabControl)
         tabControl.add(setTab, text='Settings',
                        image=self.master.icons["setting_icon"], compound=tk.LEFT)
 
-    # # 生成所有需要的图标
-    def InitIcons(self):
-        self.master.icons = {}
-        self.master.icons["novel_icon"] = ImgTkResize(
-            os.path.join(runningPath, 'images/novel.png'))
-        self.master.icons["image_icon"] = ImgTkResize(
-            os.path.join(runningPath, 'images/image.png'))
-        self.master.icons["setting_icon"] = ImgTkResize(
-            os.path.join(runningPath, 'images/globe.png'))
-    # 生成工具条
+    # Clear images tab
+    def ClearList(self, listvariable, canvas):
+        global listRecord, imagesList
+        imagesList = []
+        listvariable.set(imagesList)
+        canvas.create_image(0, 0, image='')
 
-    def ListImages(self, listVar):
-        global imagesDir, imagesList
+    def ListImages(self, listVar, button):
+        global imagesDir, imagesList, listRecord
         imagesDir = filedialog.askdirectory()
         if(imagesDir == ''):
             return None
@@ -162,18 +182,34 @@ class App:
             extend = os.path.splitext(name)[1].lower()
             if extend in imgFormat:
                 imagesList.append(name)
+        listRecord.insert(imagesList)
         listVar.set(imagesList)
 
-    def ImageDelete(self, listbox, listvariable):
+    def ShiftSelection(self, event, listbox, listVar):
+        global imagesList, listRecord, tempList
+        tempList = listbox.shiftSelection(event)
+        
+        
+    def ListCompare(self, listVar):
+        global imagesList, listRecord, tempList
+        if(tempList != [] and tempList != imagesList):
+            imagesList = tempList
+            tempList = []
+            listRecord.insert(imagesList)
+            listVar.set(imagesList)
+
+    def DeleteSelectImage(self, listbox, listvariable):
+        global imagesList, listRecord
         select = listbox.curselection()
         if(select == ()):
             return None
         global imagesList
         # imagesList.remove(imagesList[select])
         for element in select:
-            imagesList.pop(element)
             temp = listbox.get(select)
+            imagesList.pop(element)
             print(temp + " has been removed.")
+        listRecord.insert(imagesList)
         listvariable.set(imagesList)
 
     def ShowImageFromList(self, listbox, canvas):
@@ -186,7 +222,10 @@ class App:
         canvas.create_image(canX/2, canY/2, image=tkImg)
 
     def ImagesConvert(self, listVar, canvas):
-        ImagesConvertToMobi()
+        status = ImagesConvertToMobi()
+        if(status != True):
+            imagesList = listRecord.getRecord()
+            listVar.set(imagesList)
         self.ClearList(listVar, canvas)
 
     def ConvertText(self, entry):
@@ -205,6 +244,19 @@ class App:
             os.system('ebook-convert.exe' + ' "' +
                       textPath + '"  "' + saveName + '.mobi"')
 
+    def Redo(self, listvariable):
+        global imagesList
+        temp = listRecord.redo()
+        if(temp != False):
+            imagesList = temp
+            listvariable.set(imagesList)
+
+    def Undo(self, listvariable):
+        global imagesList
+        temp = listRecord.undo()
+        if(temp != False):
+            imagesList = temp
+            listvariable.set(imagesList)
 
 def ChooseFile(entry, filevariable):
     global textPath
@@ -265,6 +317,7 @@ def ImagesConvertToMobi():
                     save_all=True, append_images=imageOpenList)
     os.system('ebook-convert.exe' + ' "' + tempFile + '"  "' + fileName + '"')
     os.remove(tempFile)
+    return True
 
 
 def PrintStatus(string):
@@ -278,11 +331,11 @@ def PrintStatus(string):
     else:
         None  # TODO black font
 
-
-root = tk.Tk()
-root.title("Kinapp Testing")
-root.geometry('650x600')
-# 可否改变窗口大小
-root.resizable(width=True, height=True)
-App(root)
-root.mainloop()
+if __name__ == "__main__":
+    root = tk.Tk()
+    root.title("Kinapp Testing")
+    root.geometry('620x600')
+    # 可否改变窗口大小
+    root.resizable(width=True, height=True)
+    App(root)
+    root.mainloop()

@@ -6,7 +6,7 @@ from collections import deque
 class RecordList():
 
     def __init__(self, maxlen=20):
-        self.listRecord = deque([], maxlen=maxlen)
+        self.listRecord = deque(maxlen=maxlen)
         self.pointer = -1
 
     def undo(self):
@@ -49,13 +49,13 @@ class RecordList():
         if(record == []):
             return False
         if(self.pointer + 1 == len(self.listRecord)):
-            if(self.pointer < self.listRecord.maxlen):
+            if(self.pointer < self.listRecord.maxlen - 1):
                 self.pointer += 1
-            self.listRecord.append(record)
+            self.listRecord.append(record.copy())
         else:
             while(self.pointer + 1 != len(self.listRecord)):
                 self.listRecord.pop()
-            self.listRecord.append(record)
+            self.listRecord.append(record.copy())
             self.pointer += 1
         return record
 
@@ -65,13 +65,9 @@ if __name__ == '__main__':
     test = RecordList()
     save=test.undo()
     save=test.redo()
-
-    test.insert(['0','3','9'])
-    test.insert(['1','3','9'])
-    test.insert(['2','3','9'])
-    test.insert(['3','3','9'])
-    test.insert(['4','3','9'])
-    test.insert(['5','3','9'])
+    for i in range(0, 30):
+        test.insert([str(i),str(i+1)])
+        
     save=test.redo()
     test.insert(['after redo'])
 
