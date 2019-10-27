@@ -336,6 +336,7 @@ if __name__ == "__main__":
     root.title("Kinapp Testing")
     root.geometry('620x600')
     # 可否改变窗口大小
+    # TODO 多次删除和undo redo 后显示有误
     root.resizable(width=True, height=True)
     App(root)
     root.mainloop()
