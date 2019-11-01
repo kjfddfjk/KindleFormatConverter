@@ -1,14 +1,14 @@
 #!/usr/bin/env python
+# -*- coding: UTF-8 -*-
 import os
 import sys
 import tempfile
-from functools import reduce
+# from functools import reduce
 import tkinter as tk
 from tkinter import filedialog
 from tkinter import ttk
-from tkinter import dialog
+# from tkinter import dialog
 from tkinter import messagebox
-from collections import OrderedDict
 from PIL import Image, ImageTk
 
 from modules import DragDrop
@@ -36,6 +36,8 @@ messages = ''
 class App:
     def __init__(self, master):
         self.master = master
+        self.StyleSetting()
+
         self.InitFrames()
 
     def InitFrames(self):
@@ -44,7 +46,7 @@ class App:
 
         self.tabControl = ttk.Notebook(
             self.master)          # Create Tab Control
-        self.messageLabel = tk.Label(
+        self.messageLabel = ttk.Label(
             self.master, text="App Status Messages...")
         self.tabControl.pack(side=tk.TOP, fill="both", expand=tk.YES,
                              padx=5, pady=5, ipady=5)  # Pack to make visible
@@ -65,7 +67,6 @@ class App:
             os.path.join(runningPath, 'images/redo.png'))
         self.master.icons["undo_icon"] = ImgTkResize(
             os.path.join(runningPath, 'images/undo.png'))
-        
 
     def InitTextTab(self, tabControl):
         textTab = ttk.Frame(tabControl)
@@ -257,6 +258,11 @@ class App:
         if(temp != False):
             imagesList = temp
             listvariable.set(imagesList)
+
+    def StyleSetting(self):
+        pass
+        # self.master.bind_class(tk.Button, "<Enter>", )
+        # self.master.bind_class(tk.Button, "<Leave>",)
 
 def ChooseFile(entry, filevariable):
     global textPath

@@ -15,13 +15,13 @@ class RecordList():
             return False
         if(self.pointer == 0):
             print("NOTE: Earliest step")
-            return self.getRecord(self.pointer)
+            return self.getRecord(self.pointer).copy()
         elif(self.pointer < -1):
             print("ERROR: self.pointer %d is less than 0" % self.pointer)
             return False
         else:
             self.pointer -= 1
-            return self.getRecord(self.pointer)
+            return self.getRecord(self.pointer).copy()
     
     def redo(self):
         if(len(self.listRecord) == 0):
@@ -29,20 +29,20 @@ class RecordList():
             return False
         elif(self.pointer + 1 == len(self.listRecord)):
             print("NOTE: Latest step")
-            return self.getRecord(self.pointer)
+            return self.getRecord(self.pointer).copy()
         elif(self.pointer >= self.listRecord.maxlen):
             print("ERROR: self.pointer %d is outside of record(max%d)" % (self.pointer, self.listRecord.maxlen-1))
             return False
         else:
             self.pointer += 1
-            return self.getRecord(self.pointer)
+            return self.getRecord(self.pointer).copy()
     
     def getRecord(self, index=-1):
         if(index == -1):
             index = self.pointer
         else:
             self.pointer = index
-        return self.listRecord[index]
+        return self.listRecord[index].copy()
 
     # For insertion need to determine if at the end or middle
     def insert(self, record):
