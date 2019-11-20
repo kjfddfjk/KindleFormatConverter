@@ -1,13 +1,13 @@
-#!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 import os
 import sys
 import tempfile
+import numpy
 # from functools import reduce
+from configparser import ConfigParser
 import tkinter as tk
 from tkinter import filedialog
 from tkinter import ttk
-# from tkinter import dialog
 from tkinter import messagebox
 from PIL import Image, ImageTk
 
@@ -17,6 +17,8 @@ from modules import RecordList
 # GLOBAL VARIBALES
 # expect size
 scale = 1
+winX = 620
+winY = 600
 iconW = 24 * scale
 iconH = 24 * scale
 canX = 300
@@ -30,24 +32,28 @@ imagesList = []
 tempList = []
 recordNumber = 0
 messages = ''
+language2Long = {'en': 'English', 'chs': '简体中文', 'jp': '日本語'}
+language2Short = {v: k for k, v in language2Long.items()}
 # Window of application
+
+coverPath = ''
 
 
 class App:
     def __init__(self, master):
         self.master = master
-        self.StyleSetting()
-
+        self.InitConfigure()
+        self.InitIcons()
         self.InitFrames()
 
     def InitFrames(self):
-        # Initial icons
-        self.InitIcons()
-
+        self.master.title(self.language["APP"])
+        # 可否改变窗口大小
+        self.master.resizable(width=True, height=True)
         self.tabControl = ttk.Notebook(
             self.master)          # Create Tab Control
         self.messageLabel = ttk.Label(
-            self.master, text="App Status Messages...")
+            self.master, text=self.language["STATUS_MESSAGE"])
         self.tabControl.pack(side=tk.TOP, fill="both", expand=tk.YES,
                              padx=5, pady=5, ipady=5)  # Pack to make visible
         self.messageLabel.pack(side=tk.RIGHT, fill=tk.X, expand=tk.NO)
@@ -68,30 +74,10 @@ class App:
         self.master.icons["undo_icon"] = ImgTkResize(
             os.path.join(runningPath, 'images/undo.png'))
 
-    def InitTextTab(self, tabControl):
-        textTab = ttk.Frame(tabControl)
-        textTab.pack(fill=tk.BOTH, ipadx=5, ipady=5)
-        tabControl.add(textTab, text='Text',
-                       image=self.master.icons["novel_icon"], compound=tk.LEFT)
-
-        chooseFileButton = tk.Button(textTab, text='Choose text')
-        chooseFileButton.pack(side=tk.LEFT)
-
-        textVar = tk.StringVar(value='Please choose file')
-        textPathEntry = tk.Entry(textTab, textvar=textVar)
-        chooseFileButton.bind("<1>", lambda event, entry=textPathEntry,
-                              textVar=textVar: ChooseFile(entry, textVar))
-        textPathEntry.pack(side=tk.LEFT, ipadx=80)
-
-        confirmConvertButton = tk.Button(textTab, text="Confirm Convert")
-        confirmConvertButton.bind(
-            "<1>", lambda event, textEntry=textPathEntry: self.ConvertText(textEntry))
-        confirmConvertButton.pack(side=tk.LEFT)
-
     def InitImageTab(self, tabControl):
         global imagesList
         imgTab = ttk.Frame(tabControl)
-        tabControl.add(imgTab, text='Comic',
+        tabControl.add(imgTab, text=self.language["COMIC"],
                        image=self.master.icons["image_icon"], compound=tk.LEFT)
 
         # create frame for two sides
@@ -104,16 +90,19 @@ class App:
         leftUpFrame = ttk.Frame(leftFrame)
         leftUpFrame.pack(fill=tk.BOTH, ipadx=5, ipady=5)
         leftDownFrame = ttk.Frame(leftFrame)
-        leftDownFrame.pack(expand=tk.YES ,fill=tk.BOTH, ipadx=5, ipady=5)
+        leftDownFrame.pack(expand=tk.YES, fill=tk.BOTH, ipadx=5, ipady=5)
         rightUpFrame = ttk.Frame(rightFrame)
         rightUpFrame.pack(expand=tk.YES, fill=tk.BOTH, ipadx=5, ipady=5)
         rightDownFrame = ttk.Frame(rightFrame)
         rightDownFrame.pack(fill=tk.BOTH, ipadx=5, ipady=5)
 
         # 左边的Frame
-        directoryButton = tk.Button(leftUpFrame, text='Import Images')
-        redoButton = tk.Button(leftUpFrame, image=self.master.icons["redo_icon"])
-        undoButton = tk.Button(leftUpFrame, image=self.master.icons["undo_icon"])
+        directoryButton = tk.Button(
+            leftUpFrame, text=self.language["IMPORT_IMAGES"])
+        redoButton = tk.Button(
+            leftUpFrame, image=self.master.icons["redo_icon"])
+        undoButton = tk.Button(
+            leftUpFrame, image=self.master.icons["undo_icon"])
         listVar = tk.StringVar()
         imageListbox = DragDrop.DragDropList(leftDownFrame, font=(
             'Courier New', 16), listvariable=listVar)
@@ -121,8 +110,10 @@ class App:
         directoryButton.pack(side=tk.LEFT, anchor=tk.N, padx=5, pady=5)
         directoryButton.bind('<1>', lambda event,
                              listVar=listVar, but=directoryButton: self.ListImages(listVar, but))
-        redoButton.bind('<1>', lambda event, listVar=listVar: self.Redo(listVar))
-        undoButton.bind('<1>', lambda event, listVar=listVar: self.Undo(listVar))
+        redoButton.bind('<1>', lambda event,
+                        listVar=listVar: self.Redo(listVar))
+        undoButton.bind('<1>', lambda event,
+                        listVar=listVar: self.Undo(listVar))
         redoButton.pack(side=tk.RIGHT, anchor=tk.N, padx=5, pady=5)
         undoButton.pack(side=tk.RIGHT, anchor=tk.N, padx=5, pady=5)
         imageListbox.pack(side=tk.LEFT, anchor=tk.SW, fill=tk.Y, expand=tk.YES)
@@ -137,31 +128,76 @@ class App:
         imageCanvas.pack(side=tk.BOTTOM, expand=tk.YES)
         global tkImg
         tkImg = ImgTkResize('', (canX, canY))
-        imageCanvas.create_text(canX/2, canY/2, text="Image Preview")
+        imageCanvas.create_text(
+            canX/2, canY/2, text=self.language["IMAGE_PREVIEW"])
         imageCanvas.create_image(canX/2, canY/2, image=tkImg)
         imageListbox.bind("<Double-Button-1>", lambda event, lb=imageListbox,
                           cn=imageCanvas: self.ShowImageFromList(lb, cn))
-        imageListbox.bind('<B1-Motion>', lambda event, lb = imageListbox, lv = listVar:self.ShiftSelection(event, lb, lv))
-        imageListbox.bind('<ButtonRelease-1>', lambda event, lv = listVar:self.ListCompare(lv))
+        imageListbox.bind('<B1-Motion>', lambda event, lb=imageListbox,
+                          lv=listVar: self.ShiftSelection(event, lb, lv))
+        imageListbox.bind('<ButtonRelease-1>', lambda event,
+                          lv=listVar: self.ListCompare(lv))
         bottomFrame = tk.Frame(rightDownFrame)
         bottomFrame.pack(side=tk.BOTTOM, fill="both", expand=tk.NO)
 
-        deleteButton = tk.Button(rightDownFrame, text='Delete')
+        deleteButton = tk.Button(rightDownFrame, text=self.language["DELETE"])
         deleteButton.bind("<Button-1>", lambda event,
                           lb=imageListbox, lv=listVar: self.DeleteSelectImage(lb, lv))
         deleteButton.pack(side=tk.LEFT)
 
-        convertButton = tk.Button(rightDownFrame, text='Convert')
+        convertButton = tk.Button(
+            rightDownFrame, text=self.language["CONVERT"])
         convertButton.bind('<ButtonPress-1>', lambda event, listvar=listVar,
                            canvas=imageCanvas: self.ImagesConvert(listvar, canvas))
         convertButton.pack(side=tk.LEFT)
 
+    def InitTextTab(self, tabControl):
+        textTab = ttk.Frame(tabControl)
+        textTab.pack(fill=tk.BOTH, ipadx=5, ipady=5)
+        tabControl.add(textTab, text='Text',
+                       image=self.master.icons["novel_icon"], compound=tk.LEFT)
+
+        chooseFileButton = tk.Button(
+            textTab, text=self.language["CHOOSE_TEXT"])
+        chooseFileButton.pack(side=tk.LEFT)
+
+        textVar = tk.StringVar(value=self.language["PLEASE_CHOOSE_FILE"])
+        textPathEntry = tk.Entry(textTab, textvar=textVar)
+        chooseFileButton.bind("<1>", lambda event, entry=textPathEntry,
+                              textVar=textVar: ChooseFile(entry, textVar))
+        textPathEntry.pack(side=tk.LEFT, ipadx=80)
+
+        confirmConvertButton = tk.Button(
+            textTab, text=self.language["CONFIRM_CONVERT"])
+        confirmConvertButton.bind(
+            "<1>", lambda event, textEntry=textPathEntry: self.ConvertText(textEntry))
+        confirmConvertButton.pack(side=tk.LEFT)
+        coverCanvas = tk.Canvas(textTab, bg="white", height=canY, width=canX)
+        coverCanvas.create_text(
+            canX/2, canY/2, text=self.language["ORIGINAL_COVER"])
+        coverCanvas.bind("<1>", lambda event,
+                         canvas=coverCanvas: ChooseImage(canvas))
+
     def InitSettingTab(self, tabControl):
         setTab = ttk.Frame(tabControl)
-        tabControl.add(setTab, text='Settings',
+        tabControl.add(setTab, text=self.language["SETTINGS"],
                        image=self.master.icons["setting_icon"], compound=tk.LEFT)
+        '''
+        '''
+        languageVar = tk.StringVar()  # 自带的文本
+        languageCombobox = ttk.Combobox(
+            setTab, textvariable=languageVar)  # 初始化
+        languageCombobox["values"] = list(language2Long.values())
+        # print(languageCombobox["values"])
+        languageIndex = list(language2Long.values()).index(
+            self.language["LANGUAGES"])  # 找到当前语言在combox里的位置
+        languageCombobox.current(languageIndex)  # 显示当前语言
+        languageCombobox.bind("<<ComboboxSelected>>", lambda event, combobox=languageCombobox: self.ChangeConfig(
+            combobox, settings={"Language": languageCombobox.get()}))
+        languageCombobox.pack()
 
     # Clear images tab
+
     def ClearList(self, listvariable, canvas):
         global listRecord, imagesList
         imagesList = []
@@ -189,8 +225,7 @@ class App:
     def ShiftSelection(self, event, listbox, listVar):
         global imagesList, listRecord, tempList
         tempList = listbox.shiftSelection(event)
-        
-        
+
     def ListCompare(self, listVar):
         global imagesList, listRecord, tempList
         if(tempList != [] and tempList != imagesList):
@@ -229,7 +264,7 @@ class App:
             listVar.set(imagesList)
         self.ClearList(listVar, canvas)
 
-    def ConvertText(self, entry):
+    def ConvertText(self, entry, cover=""):
         if(entry.get() == ''):
             print("No file can be convert")
             return None
@@ -242,8 +277,12 @@ class App:
         saveName = filedialog.asksaveasfilename(
             initialfile=basename, filetypes=[("MOBI", ".mobi")])
         if(saveName):
-            os.system('ebook-convert.exe' + ' "' +
-                      textPath + '"  "' + saveName + '.mobi"')
+            if(cover == ''):
+                os.system('ebook-convert.exe' + ' "' +
+                          textPath + '"  "' + saveName + '.mobi"')
+            else:
+                os.system('ebook-convert.exe' + ' "' +
+                          textPath + '"  "' + saveName + '.mobi" --cover "' + cover + '"')
 
     def Redo(self, listvariable):
         global imagesList
@@ -259,10 +298,43 @@ class App:
             imagesList = temp
             listvariable.set(imagesList)
 
-    def StyleSetting(self):
-        pass
-        # self.master.bind_class(tk.Button, "<Enter>", )
-        # self.master.bind_class(tk.Button, "<Leave>",)
+    def InitConfigure(self):
+        if not os.path.exists('config.ini'):
+            self.ChangeConfig()
+
+        config = ConfigParser()
+        config.read('config.ini')
+        language = config.get('settings', 'Language')
+
+        try:
+            lan = language2Long[language]
+            self.language = SelectLanguage(lan)
+        except Exception as e:
+            self.language = SelectLanguage('English')
+            self.ChangeConfig
+            print(repr(e))
+
+    def ChangeConfig(self, combobox, settings={'Language': 'English'}):
+        tempSettings = dict()
+        tempSettings['Language'] = language2Short[settings['Language']]
+        config = ConfigParser()
+        if not os.path.exists('config.ini'):
+            config['settings'] = tempSettings
+            config.write(open('config.ini', 'w'))
+        config.read('config.ini')
+        if(isinstance(tempSettings, dict)):
+            config['settings'] = tempSettings
+            config.write(open('config.ini', 'w'))
+        else:
+            raise TypeError(
+                "Require dict type of 'settings' send to ChangeConfig")
+        print("Restart app after change language")
+
+
+def ChooseImage(widget):
+    pass
+# TODO by open select a image file explore, and put tkimage to canvas widget. create_image which use for text cover
+
 
 def ChooseFile(entry, filevariable):
     global textPath
@@ -272,7 +344,7 @@ def ChooseFile(entry, filevariable):
         filevariable.set(textPath)
 
 
-def ImgTkResize(filepath, size=(iconW, iconH)):
+def ImgTkResize(filepath, size=(iconW, iconH), fill=False):
     if(not os.path.exists(filepath)):
         return None
     # open as a PIL image object
@@ -305,15 +377,15 @@ def ImagesConvertToMobi():
             imageOpen = Image.open(imagesDir + '/' + image)
             imageOpen.load()
         except IOError:
-            # TODO back to previous step 
+            # TODO back to previous step
             raise
         if imageOpen.mode == "RGBA":
             imageOpen = imageOpen.convert('RGB')
         imageOpenList.append(imageOpen)
-    fileName = filedialog.asksaveasfilename(
-        initialdir=imagesDir, defaultextension=[("MOBI", ".mobi")])
-    # fileName = filedialog.asksaveasfilename(initialdir=path, filetypes=[("MOBI", ".mobi")])
-    if(fileName):
+    # fileTypes=[("MOBI", ".mobi")]
+    # fileName = filedialog.asksaveasfilename(initialdir=imagesDir)
+    fileName = filedialog.asksaveasfilename(filetypes=[("MOBI", ".mobi")])
+    if(not fileName):
         # TODO need to restore list
         raise ValueError("Missing given name")
     fileName = fileName + '.mobi'
@@ -321,28 +393,58 @@ def ImagesConvertToMobi():
     tempFile = '%s.pdf' % os.path.join(tempfile.gettempdir(), str(os.getpid()))
     firstImage.save(tempFile, "PDF", resolution=100.0,
                     save_all=True, append_images=imageOpenList)
+
+    # call = 'ebook-convert.exe'
+    # print('{} "{}" "{}"'.format(call, tempFile, fileName))
+    # os.system('"{}" "{}" "{}"'.format(call, tempFile, fileName))
+    # os.system(call + ' "' + tempFile + '"  "' + fileName + '"')
     os.system('ebook-convert.exe' + ' "' + tempFile + '"  "' + fileName + '"')
     os.remove(tempFile)
     return True
 
 
+def SelectLanguage(lan):
+    languages = numpy.array([["LANGUAGES", "English", "简体中文", "日本語"],
+                             ["APP", "KinApp", "KinApp", "KinApp"],
+                             ["COMIC", "Comic", "图片", 4],
+                             ["TEXT", "Text", "文档", 4],
+                             ["SETTINGS", "Settings", "设定", 4],
+                             ["IMPORT_IMAGES", "import images", "汇入图片", 4],
+                             ["IMAGE_PREVIEW", "image preview", "图片预览", 4],
+                             ["DELETE", "delete", "删除", 4],
+                             ["CONVERT", "convert", "转换", 4],
+                             ["CHOOSE_TEXT", "choose text", "选择文档", 4],
+                             ["PLEASE_CHOOSE_FILE", "please choose file", "请选择文件", 4],
+                             ["CONFIRM_CONVERT", "confirm convert", "确认转换", 4],
+                             ["STATUS_MESSAGE", "App status messege", "状态输出", 4],
+                             ["ORIGINAL_COVER", "Use Original Cover", "使用原有封面", 4],
+                             ["RESTART_AFTER_CHANGE_CONFIG",
+                                 "Restart after change config", "请重启以改变显示", ""],
+                             [1, 2, 3, 4]])
+    if(not lan):
+        return dict(zip(languages[:, 0], languages[:, 1]))
+    see = languages[0, 1:]
+    results = numpy.where(languages[0, 1:] == lan)
+    if(not results):
+        return dict(zip(languages[:, 0], languages[:, 1]))
+    rs = results[0][0] + 1
+    return dict(zip(languages[:, 0], languages[:, rs]))
+
+
 def PrintStatus(string):
     fonts = ['', 'red']
     if(string.startswith("ERROR:")):
-        None  # TODO red font
+        pass  # TODO red font
     elif(string.startswith("NOTE:")):
-        None  # TODO orange font
+        pass  # TODO orange font
     elif(string.startwith("DONE")):
-        None  # TODO green font
+        pass  # TODO green font
     else:
-        None  # TODO black font
+        pass  # TODO black font
+
 
 if __name__ == "__main__":
     root = tk.Tk()
-    root.title("Kinapp Testing")
-    root.geometry('620x600')
-    # 可否改变窗口大小
     # TODO 多次删除和undo redo 后显示有误
-    root.resizable(width=True, height=True)
     App(root)
     root.mainloop()

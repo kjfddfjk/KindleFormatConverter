@@ -1,5 +1,5 @@
+# -*- coding: utf-8
 import tkinter as tk
-
 
 class DragDropList(tk.Listbox):
     """ A Tkinter listbox with drag'n'drop reordering of entries. """
