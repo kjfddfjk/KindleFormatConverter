@@ -1,1 +1,1 @@
-# _all__ = ['DragDrop', 'RecordList']
+__all__ = ['DragDrop', 'RecordList']
