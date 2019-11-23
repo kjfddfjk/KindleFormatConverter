@@ -37,6 +37,18 @@ language2Short = {v: k for k, v in language2Long.items()}
 # Window of application
 
 coverPath = ''
+bgTkTest = None
+
+singleHide = False
+
+
+def DisplayWidget(event, widget):
+    global singleHide
+    if singleHide:
+        widget.grid()
+    else:
+        widget.grid_remove()
+    singleHide = not singleHide
 
 
 class App:
@@ -64,15 +76,17 @@ class App:
     def InitIcons(self):
         self.master.icons = {}
         self.master.icons["novel_icon"] = ImgTkResize(
-            os.path.join(runningPath, 'images/novel.png'))
+            os.path.join(runningPath, 'images/novel.png'), fill=True)
         self.master.icons["image_icon"] = ImgTkResize(
-            os.path.join(runningPath, 'images/image.png'))
+            os.path.join(runningPath, 'images/image.png'), fill=True)
         self.master.icons["setting_icon"] = ImgTkResize(
-            os.path.join(runningPath, 'images/globe.png'))
+            os.path.join(runningPath, 'images/settings.png'), fill=True)
         self.master.icons["redo_icon"] = ImgTkResize(
             os.path.join(runningPath, 'images/redo.png'))
         self.master.icons["undo_icon"] = ImgTkResize(
             os.path.join(runningPath, 'images/undo.png'))
+        self.master.icons["bg_image"] = ImgTkResize(
+            os.path.join(runningPath, 'images/bg620600.jpg'), size=(winX, winY), fill=True)
 
     def InitImageTab(self, tabControl):
         global imagesList
@@ -105,7 +119,7 @@ class App:
             leftUpFrame, image=self.master.icons["undo_icon"])
         listVar = tk.StringVar()
         imageListbox = DragDrop.DragDropList(leftDownFrame, font=(
-            'Courier New', 16), listvariable=listVar)
+            'Courier New', 14), listvariable=listVar)
         scroll = ttk.Scrollbar(leftDownFrame)
         directoryButton.pack(side=tk.LEFT, anchor=tk.N, padx=5, pady=5)
         directoryButton.bind('<1>', lambda event,
@@ -152,31 +166,44 @@ class App:
         convertButton.pack(side=tk.LEFT)
 
     def InitTextTab(self, tabControl):
+        global bgTkTest
         textTab = ttk.Frame(tabControl)
-        textTab.pack(fill=tk.BOTH, ipadx=5, ipady=5)
-        tabControl.add(textTab, text='Text',
+        textTab.pack(fill=tk.BOTH)
+        tabControl.add(textTab, text=self.language["TEXT"],
                        image=self.master.icons["novel_icon"], compound=tk.LEFT)
 
+        bgLabel = tk.Label(textTab)
+        bgLabel.configure(image=self.master.icons["bg_image"])
+        bgLabel.pack(fill=tk.BOTH, expand=tk.YES)
+
         chooseFileButton = tk.Button(
-            textTab, text=self.language["CHOOSE_TEXT"])
-        chooseFileButton.pack(side=tk.LEFT)
+            bgLabel, text=self.language["CHOOSE_TEXT"])
 
         textVar = tk.StringVar(value=self.language["PLEASE_CHOOSE_FILE"])
-        textPathEntry = tk.Entry(textTab, textvar=textVar)
+        textPathEntry = tk.Entry(bgLabel, textvar=textVar)
         chooseFileButton.bind("<1>", lambda event, entry=textPathEntry,
                               textVar=textVar: ChooseFile(entry, textVar))
-        textPathEntry.pack(side=tk.LEFT, ipadx=80)
 
         confirmConvertButton = tk.Button(
-            textTab, text=self.language["CONFIRM_CONVERT"])
+            bgLabel, text=self.language["CONFIRM_CONVERT"])
         confirmConvertButton.bind(
-            "<1>", lambda event, textEntry=textPathEntry: self.ConvertText(textEntry))
-        confirmConvertButton.pack(side=tk.LEFT)
-        coverCanvas = tk.Canvas(textTab, bg="white", height=canY, width=canX)
+            "<1>", lambda event, textEntry=textPathEntry: self.ConvertToMobi(textEntry))
+        coverCanvas = tk.Canvas(bgLabel, bg="white",
+                                height=canY, width=canX)
         coverCanvas.create_text(
             canX/2, canY/2, text=self.language["ORIGINAL_COVER"])
-        coverCanvas.bind("<1>", lambda event,
-                         canvas=coverCanvas: ChooseImage(canvas))
+        coverCanvas.bind(
+            "<1>", lambda event: DisplayWidget(event, coverCanvas))
+        # coverCanvas.bind("<1>", lambda event,
+        #                  canvas=coverCanvas: ChooseImage(canvas))
+        chooseFileButton.grid(row=0, column=0, padx=5, pady=5)
+        textPathEntry.grid(row=0, column=1, padx=5, pady=5)
+        confirmConvertButton.grid(row=0, column=2, padx=5, pady=5)
+        coverCanvas.grid(row=1, column=0, columnspan=3, padx=5, pady=5)
+        # coverCanvas.pack(side=tk.TOP, anchor = tk.E)
+        # chooseFileButton.pack(side=tk.LEFT)
+        # textPathEntry.pack(side=tk.LEFT, ipadx=80)
+        # confirmConvertButton.pack(side=tk.LEFT)
 
     def InitSettingTab(self, tabControl):
         setTab = ttk.Frame(tabControl)
@@ -189,11 +216,12 @@ class App:
             setTab, textvariable=languageVar)  # 初始化
         languageCombobox["values"] = list(language2Long.values())
         # print(languageCombobox["values"])
-        languageIndex = list(language2Long.values()).index(
-            self.language["LANGUAGES"])  # 找到当前语言在combox里的位置
+        nowLanguage = self.language["LANGUAGES"]
+        languagesList = list(language2Long.values())
+        languageIndex = languagesList.index(nowLanguage)  # 找到当前语言在combox里的位置
         languageCombobox.current(languageIndex)  # 显示当前语言
         languageCombobox.bind("<<ComboboxSelected>>", lambda event, combobox=languageCombobox: self.ChangeConfig(
-            combobox, settings={"Language": languageCombobox.get()}))
+            settings={"Language": languageCombobox.get()}))
         languageCombobox.pack()
 
     # Clear images tab
@@ -248,11 +276,23 @@ class App:
         listRecord.insert(imagesList)
         listvariable.set(imagesList)
 
+    def ShowImage(self, filePath, canvas):
+        tempCanX = canvas.winfo_width()
+        tempCanY = canvas.winfo_height()
+        print(tempCanX, tempCanY)
+        tkImg = ImgTkResize(filePath, (canX, canY))
+        canvas.create_image(canX/2, canY/2, image=tkImg)
+
     def ShowImageFromList(self, listbox, canvas):
         index = listbox.curselection()
         if(index == ()):
             return
         global tkImg, imagesList, imagesDir
+
+        tempCanX = canvas.winfo_width()
+        tempCanY = canvas.winfo_height()
+        print(tempCanX, tempCanY)
+
         directory = imagesDir + '/' + imagesList[index[0]]
         tkImg = ImgTkResize(directory, (canX, canY))
         canvas.create_image(canX/2, canY/2, image=tkImg)
@@ -264,24 +304,24 @@ class App:
             listVar.set(imagesList)
         self.ClearList(listVar, canvas)
 
-    def ConvertText(self, entry, cover=""):
+    def ConvertToMobi(self, entry, cover=None):
         if(entry.get() == ''):
             print("No file can be convert")
             return None
         filePath = entry.get()
-        basename = os.path.basename(os.path.splitext(filePath)[0])
+        baseName = os.path.basename(os.path.splitext(filePath)[0])
         if(not os.access(textPath, mode=os.R_OK)):
             # TODO maybe need to
             print("Unable to read: %s" % textPath)
             return None
         saveName = filedialog.asksaveasfilename(
-            initialfile=basename, filetypes=[("MOBI", ".mobi")])
+            initialfile=baseName, filetypes=[("MOBI", ".mobi")])
         if(saveName):
-            if(cover == ''):
-                os.system('ebook-convert.exe' + ' "' +
+            if(cover == None):
+                os.system('Calibre\\ebook-convert.exe' + ' "' +
                           textPath + '"  "' + saveName + '.mobi"')
             else:
-                os.system('ebook-convert.exe' + ' "' +
+                os.system('Calibre\\ebook-convert.exe' + ' "' +
                           textPath + '"  "' + saveName + '.mobi" --cover "' + cover + '"')
 
     def Redo(self, listvariable):
@@ -311,10 +351,10 @@ class App:
             self.language = SelectLanguage(lan)
         except Exception as e:
             self.language = SelectLanguage('English')
-            self.ChangeConfig
+            self.ChangeConfig()
             print(repr(e))
 
-    def ChangeConfig(self, combobox, settings={'Language': 'English'}):
+    def ChangeConfig(self, settings={'Language': 'English'}):
         tempSettings = dict()
         tempSettings['Language'] = language2Short[settings['Language']]
         config = ConfigParser()
@@ -344,8 +384,19 @@ def ChooseFile(entry, filevariable):
         filevariable.set(textPath)
 
 
+def ImageRotate(filepath, degree, canvas):
+    try:
+        image = Image.open(filepath)
+        image.rotate(degree)
+        image.save(filepath)
+    except:
+        pass
+    canvas.create_image()
+
+
 def ImgTkResize(filepath, size=(iconW, iconH), fill=False):
     if(not os.path.exists(filepath)):
+
         return None
     # open as a PIL image object
     pilImg = Image.open(filepath)
@@ -354,7 +405,12 @@ def ImgTkResize(filepath, size=(iconW, iconH), fill=False):
         return None
     baseSize = pilImg.size
     if(baseSize[0] > size[0] or baseSize[1] > size[1]):
-        ratio = max(baseSize[0]/size[0], baseSize[1]/size[1])
+        if(fill == False):
+            ratio = max(baseSize[0]/size[0], baseSize[1]/size[1])
+        elif(baseSize[0] > size[0] and baseSize[1] > size[1]):
+            ratio = min(baseSize[0]/size[0], baseSize[1]/size[1])
+        else:
+            return ImageTk.PhotoImage(pilImg)
         pilImgResized = pilImg.resize(
             (int(baseSize[0]/ratio), int(baseSize[1]/ratio)), Image.ANTIALIAS)
     else:
@@ -414,10 +470,13 @@ def SelectLanguage(lan):
                              ["DELETE", "delete", "删除", "削除"],
                              ["CONVERT", "convert", "转换", "変換"],
                              ["CHOOSE_TEXT", "choose text", "选择文档", "ファイル選択"],
-                             ["PLEASE_CHOOSE_FILE", "please choose file", "请选择文件", "ファイルを選択してください"],
+                             ["PLEASE_CHOOSE_FILE", "please choose file",
+                                 "请选择文件", "ファイルを選択してください"],
                              ["CONFIRM_CONVERT", "confirm convert", "确认转换", "変換を確認"],
-                             ["STATUS_MESSAGE", "App status messege", "状态输出", "ステータス出力"],
-                             ["ORIGINAL_COVER", "Use Original Cover", "元のカバーを使用", 4],
+                             ["STATUS_MESSAGE", "App status messege",
+                                 "状态输出", "ステータス出力"],
+                             ["ORIGINAL_COVER", "Use Original Cover",
+                                 "使用原有封面", "元のカバーを使用"],
                              ["RESTART_AFTER_CHANGE_CONFIG",
                                  "Restart after change config", "请重启以改变显示", "再起動して表示を変更してください"],
                              [1, 2, 3, 4]])
@@ -432,12 +491,16 @@ def SelectLanguage(lan):
 
 
 def PrintStatus(string):
-    fonts = ['', 'red']
+    fontSize = 12
+    fonts = {'ERROR': ('red', fontSize), 'NOTE': ('yellow', fontSize), 'DONE': (
+        'green', fontSize), 'INFO': ("black", fontSize)}
     if(string.startswith("ERROR:")):
+        return fonts["ERROR"]
         pass  # TODO red font
-    elif(string.startswith("NOTE:")):
+    elif(string.startswith("NOTE: ")):
+        return fonts["ERROR"]
         pass  # TODO orange font
-    elif(string.startwith("DONE")):
+    elif(string.startwith("DONE: ")):
         pass  # TODO green font
     else:
         pass  # TODO black font
@@ -447,4 +510,5 @@ if __name__ == "__main__":
     root = tk.Tk()
     # TODO 多次删除和undo redo 后显示有误
     App(root)
+    # root.attributes("-alpha", 0.5)
     root.mainloop()
