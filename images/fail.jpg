@@ -1,0 +1,81 @@
+										# orange = 50
+										# beer = 50
+										oneDollar = 0
+										halfDollar = 2
+										changeLight = True
+
+def SaveChange(inputMoney):
+    global oneDollar, halfDollar
+    if(inputMoney=='1'):
+        oneDollar +=1
+    elif(inputMoney=='0.5'):
+        halfDollar +=1
+    else:
+        print("Error: %s, wrong coin input" %inputMoney)
+        exit()
+
+def ReturnChange(inputMoney):
+    global oneDollar, halfDollar
+    if(inputMoney=='1'):
+        oneDollar -=1
+        print("Return change $1")
+    elif(inputMoney=='0.5'):
+        halfDollar -=1
+        print("Return change $0.5")
+    elif(inputMoney=='0'):
+        print("No change return")
+    else:
+        print("Error: %s, wrong coin input" %inputMoney)
+        exit()
+
+def GetDrink(drink):
+    # global orange, beer
+    if(drink=="O"):# and orange > 0
+        # orange -=1
+        print("Get your orange juice.")
+        return True
+    elif(drink=="B"):# and orange > 0
+        # beer -=1
+        print("Get your beer.")
+        return True
+    else:
+        return False
+
+def ChangeLight():
+    global changeLight
+    changeLight = (halfDollar > 0)
+    if(changeLight):
+        return True
+    else:
+        return False
+
+if __name__ == "__main__":
+    while(1):
+        if(not ChangeLight()):
+            print("No change light: ON")
+        else:
+            print("No change light: OFF")
+
+        inputMoney = input("Please input coin: $(0.5/1):")
+        while(inputMoney != '0.5' and inputMoney != '1'):
+            inputMoney = input("Please input coin: $(0.5/1):")
+
+        SaveChange(inputMoney)
+        if(not ChangeLight()):
+            print("Sorry no change")
+            ReturnChange(inputMoney)
+            next
+
+        buy = ""
+        while(buy != 'O' and buy != "B"):
+           buy = input("Please input (O / B) for orange juice or beer:")
+           buy = buy.upper()[0]
+
+        if(GetDrink(buy)):
+            if(inputMoney == '1'):
+                ReturnChange('0.5')
+            elif(inputMoney=='0.5'):
+                ReturnChange('0')
+        else:
+            print("Out of stack")
+            ReturnChange(inputMoney)

@@ -11,33 +11,29 @@ class RecordList():
 
     def undo(self):
         if(self.pointer == -1):
-            print("NOTE: No record")
-            return False
+            return (False, "WARN: No record")
         if(self.pointer == 0):
-            print("NOTE: Earliest step")
-            return self.getRecord(self.pointer).copy()
+            return (self.getRecord(self.pointer).copy(), "WARN: Earliest step")
         elif(self.pointer < -1):
-            print("ERROR: self.pointer %d is less than 0" % self.pointer)
-            return False
+            return (False, "ERROR: self.pointer %d is less than 0" % self.pointer)
         else:
             self.pointer -= 1
-            return self.getRecord(self.pointer).copy()
+            return (self.getRecord(self.pointer).copy(), "")
     
     def redo(self):
         if(len(self.listRecord) == 0):
-            print("NOTE: No record")
-            return False
+            return (False, "NOTE: No record")
         elif(self.pointer + 1 == len(self.listRecord)):
-            print("NOTE: Latest step")
-            return self.getRecord(self.pointer).copy()
+            return (self.getRecord(self.pointer).copy(), "NOTE: Latest step")
         elif(self.pointer >= self.listRecord.maxlen):
-            print("ERROR: self.pointer %d is outside of record(max%d)" % (self.pointer, self.listRecord.maxlen-1))
-            return False
+            return (False, "ERROR: self.pointer %d is outside of record(max%d)" % (self.pointer, self.listRecord.maxlen-1))
         else:
             self.pointer += 1
-            return self.getRecord(self.pointer).copy()
+            return (self.getRecord(self.pointer).copy(), "")
     
     def getRecord(self, index=-1):
+        if(len(self.listRecord)==0):
+                 return False
         if(index == -1):
             index = self.pointer
         else:
