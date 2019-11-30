@@ -22,9 +22,9 @@ class RecordList():
     
     def redo(self):
         if(len(self.listRecord) == 0):
-            return (False, "NOTE: No record")
+            return (False, "WARN: No record")
         elif(self.pointer + 1 == len(self.listRecord)):
-            return (self.getRecord(self.pointer).copy(), "NOTE: Latest step")
+            return (self.getRecord(self.pointer).copy(), "WARN: Latest step")
         elif(self.pointer >= self.listRecord.maxlen):
             return (False, "ERROR: self.pointer %d is outside of record(max%d)" % (self.pointer, self.listRecord.maxlen-1))
         else:
