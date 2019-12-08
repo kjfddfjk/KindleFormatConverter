@@ -1,8 +1,10 @@
 # -*- coding: utf-8
 import tkinter as tk
 
+
 class DragDropList(tk.Listbox):
     """ A Tkinter listbox with drag'n'drop reordering of entries. """
+
     def __init__(self, master, **kw):
         self.count = 0
         kw['selectmode'] = tk.SINGLE
@@ -30,7 +32,6 @@ class DragDropList(tk.Listbox):
             self.curIndex = i
         temp = list(self.get(0, self.size()-1))
         return temp
-        
 
 
 if __name__ == '__main__':
