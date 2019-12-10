@@ -232,7 +232,7 @@ def ImagesConvertToMobi():
         imageOpenList.append(imageOpen)
     fileName = filedialog.asksaveasfilename(initialdir=imagesDir, defaultextension=[("MOBI", ".mobi")])
     # fileName = filedialog.asksaveasfilename(initialdir=path, filetypes=[("MOBI", ".mobi")])
-    if(fileName):
+    if(not fileName):
         # TODO need to restore list
         return None
     fileName = fileName + '.mobi'

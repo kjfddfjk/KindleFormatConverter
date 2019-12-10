@@ -1,0 +1,4 @@
+dist/**
+build/**
+test/temp/**
+modules/__pycache__/**
