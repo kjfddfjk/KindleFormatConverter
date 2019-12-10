@@ -66,7 +66,7 @@ class App:
             self.master)          # Create Tab Control
         self.messageLabel = tk.Label(
             self.master, text=self.language["STATUS_MESSAGE"], bg=self.cfg["Bg1"])
-        self.messageLabel.config(font=(self.cfg["TitleFont"], self.cfg["FontSize"]))
+        self.messageLabel.config(font=(self.cfg["TitleFont"], self.cfg["FontSize"] - 2))
         self.tabControl.pack(side=tk.TOP, fill="both", expand=tk.YES,
                              padx=5, pady=5, ipady=5)  # Pack to make visible
         self.messageLabel.pack(side=tk.RIGHT, fill=tk.X, expand=tk.NO)
@@ -348,12 +348,13 @@ class App:
             self.ShowMessage("ERROR: {}".format(self.language["NO_FILE_CONVERT"]))
             return None
         try:
-            Image.open('"{}"'.format(self.temp["COVER"]))
+            Image.open(self.temp["COVER"])
             status = ConvertToMobi(entry.get(), self.temp["COVER"])
         except Exception as e:
-            self.ShowMessage('ERROR: "{}" {}'.format(self.temp["COVER"], self.language["UNABLE_OPEN"]))
+            if("COVER" in self.temp):
+                self.ShowMessage('ERROR: "{}" {}'.format(self.temp["COVER"], self.language["UNABLE_OPEN"]))
+                print(repr(e))
             status = ConvertToMobi(entry.get(), None)
-            raise e
         if(len(status) != 2):
             print("ERROR"+status)
         elif(status[0] is True):
@@ -419,7 +420,7 @@ class App:
             if(self.cfg["FontSize"] < 10):
                 raise Exception("Font size %d is too small", self.cfg["FontSize"])
         except Exception as e:
-            self.cfg["FontSize"] = 12
+            self.cfg["FontSize"] = 10
             isWrite = True
             print(repr(e))
 
