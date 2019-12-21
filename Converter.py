@@ -73,7 +73,6 @@ class App:
         self.InitTextTab()
         self.InitImageTab()
         self.InitSettingTab()
-        # 可否改变窗口大小
         self.master.resizable(width=False, height=False)
 
     def InitIcons(self):
@@ -101,7 +100,7 @@ class App:
         self.icons["done_icon"] = TkImgResize(
             os.path.join(runningPath, 'images', 'done.png'))
         self.icons["bg_image"] = TkImgResize(
-            self.cfg["BgImagePath"], size=(int(winX*1.2), winY))
+            self.cfg["BgImagePath"], size=(int(winX * 1.2), winY))
 
     def InitTheme(self):
         pass
@@ -125,14 +124,14 @@ class App:
         confirmConvertButton = ttk.Button(
             textBgLabel, text=self.language["CONFIRM_CONVERT"], style="ME.TButton")
         confirmConvertButton.bind(
-            "<1>", lambda event, textEntry=textPathEntry: self.TextConvert(textEntry))
+            "<1>", lambda event, textEntry=textPathEntry: self.TextConvert(event, textEntry))
         coverCanvas = tk.Canvas(textBgLabel, bg=self.cfg["Bg1"], width=canX,
-                                height=canY//3)
+                                height=canY // 3)
         coverCanvas.create_text(
-            canX//2, canY//6, text=self.language["ORIGINAL_COVER"])
+            canX // 2, canY // 6, text=self.language["ORIGINAL_COVER"])
         coverCanvas.bind(
             "<1>", lambda event: self.SetCover(event))
-        textPathEntry.grid(row=0, column=0, columnspan=3, sticky=tk.W+tk.E, padx=5, pady=5)
+        textPathEntry.grid(row=0, column=0, columnspan=3, sticky=tk.W + tk.E, padx=5, pady=5)
         chooseFileButton.grid(row=0, column=3, padx=5, pady=5)
         confirmConvertButton.grid(row=9, column=3, sticky=tk.E, padx=5, pady=5)
         coverCanvas.grid(row=1, column=0, columnspan=3, padx=5, pady=5)
@@ -155,7 +154,7 @@ class App:
         imageListbox = DragDrop.DragDropList(imageBgLabel, height=18, font=(
             'Courier New', 14), bg=self.cfg["Bg1"], listvariable=listVar)
         scroll = ttk.Scrollbar(imageBgLabel)
-        directoryButton.bind('<1>', lambda event: self.ListImages(listVar, imageCanvas))
+        directoryButton.bind('<1>', lambda event: self.ListImages(event, listVar, imageCanvas))
         redoButton.bind('<1>', lambda event,
                         listVar=listVar: self.Redo(listVar))
         undoButton.bind('<1>', lambda event,
@@ -163,8 +162,8 @@ class App:
         directoryButton.grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
         undoButton.grid(row=0, column=1, sticky=tk.E, padx=5, pady=5)
         redoButton.grid(row=0, column=2, sticky=tk.E, padx=5, pady=5)
-        imageListbox.grid(row=1, column=0, columnspan=4, sticky=tk.N+tk.S+tk.W+tk.E, padx=(5, 0), pady=5)
-        scroll.grid(row=1, column=4, sticky=tk.N+tk.S+tk.W, padx=(0, 5), pady=5)
+        imageListbox.grid(row=1, column=0, columnspan=4, sticky=tk.N + tk.S + tk.W + tk.E, padx=(5, 0), pady=5)
+        scroll.grid(row=1, column=4, sticky=tk.N + tk.S + tk.W, padx=(0, 5), pady=5)
         # 设置滚动条与label组件关联
         scroll['command'] = imageListbox.yview
         imageListbox.configure(yscrollcommand=scroll.set)
@@ -180,8 +179,8 @@ class App:
         imageCanvas.grid(row=1, column=5, columnspan=4, padx=5, pady=5)
         tkImg = TkImgResize('', (canX, canY))
         imageCanvas.create_text(
-            canX//2, canY//2, text=self.language["IMAGE_PREVIEW"])
-        imageCanvas.create_image(canX//2, canY//2, image=tkImg)
+            canX // 2, canY // 2, text=self.language["IMAGE_PREVIEW"])
+        imageCanvas.create_image(canX // 2, canY // 2, image=tkImg)
         imageListbox.bind("<Double-Button-1>", lambda event, lb=imageListbox,
                           cn=imageCanvas: self.ShowImageFromList(lb, cn))
         imageListbox.bind('<B1-Motion>', lambda event, lb=imageListbox,
@@ -197,7 +196,7 @@ class App:
         convertButton = ttk.Button(
             imageBgLabel, text=self.language["CONVERT"], style="ME.TButton")
         convertButton.bind('<1>', lambda event, listvar=listVar,
-                           canvas=imageCanvas: self.ImagesConvert(listvar, canvas))
+                           canvas=imageCanvas: self.ImagesConvert(event, listvar, canvas))
         rotateLeftButton.grid(row=2, column=5, sticky=tk.E, padx=10, pady=5)
         rotateRightButton.grid(row=2, column=6, sticky=tk.W, padx=10, pady=5)
         convertButton.grid(row=2, column=7, columnspan=2, sticky=tk.E, padx=5, pady=5)
@@ -229,7 +228,7 @@ class App:
         languagePromptLabel.grid(row=0, column=0, padx=5, pady=5, sticky=tk.E)
         self.languageCombobox.grid(row=0, column=1, padx=5, pady=5, sticky=tk.W)
         bgPathPromptLabel.grid(row=1, column=0, padx=5, pady=5, sticky=tk.E)
-        bgPathEntry.grid(row=2, column=0, columnspan=3, padx=5, pady=5, sticky=tk.W+tk.E)
+        bgPathEntry.grid(row=2, column=0, columnspan=3, padx=5, pady=5, sticky=tk.W + tk.E)
         selectBgButton.grid(row=2, column=3, padx=5, pady=5, sticky=tk.W)
         configButton.grid(row=9, column=3, sticky=tk.S, padx=5, pady=5)
 
@@ -239,9 +238,10 @@ class App:
         listvariable.set(imagesList)
         canvas.delete("all")
 
-    def ListImages(self, listVar, canvas):
+    def ListImages(self, event, listVar, canvas):
         global imagesDir, imagesList, listRecord
         imagesDir = filedialog.askdirectory()
+        event.widget.config(state=tk.NORMAL)
         if(imagesDir == ''):
             return None
         self.ClearList(listVar, canvas)
@@ -257,7 +257,7 @@ class App:
                 imagesList.append(name)
         listRecord.insert(imagesList)
         listVar.set(imagesList)
-        self.ShowMessage("DONE: {} {}".format(len(imagesList), self.language["IMAGES_IMPORT_SUCCESS"]))
+        self.ShowMessage(f"DONE: {len(imagesList)} {self.language['IMAGES_IMPORT_SUCCESS']}")
 
     def ShiftSelection(self, event, listbox, listVar):
         global imagesList, listRecord, tempList
@@ -282,8 +282,7 @@ class App:
         for element in select:
             temp = listbox.get(select)
             imagesList.pop(element)
-            print("WARN: '{}' {}".format(temp, self.language["IMAGE_REMOVE"]))
-            self.ShowMessage("WARN: '{}' {}".format(temp, self.language["IMAGE_REMOVE"]))
+            self.ShowMessage(f"WARN: '{temp}' {self.language['IMAGE_REMOVE']}")
         listRecord.insert(imagesList)
         listvariable.set(imagesList)
 
@@ -291,12 +290,12 @@ class App:
         global tkImg
         tkImg = TkImgResize(filePath, (canX, canY))
         if(tkImg is None):
-            self.ShowMessage("ERROR: '{}' {}".format(filePath, self.language["UNABLE_OPEN"]))
-            raise IOError("Cannot Open image {}".format(filePath))
+            self.ShowMessage(f"ERROR: '{filePath}' {self.language['UNABLE_OPEN']}")
+            raise IOError(f"Cannot Open image {filePath}")
         tempX = tkImg.width()
         tempY = tkImg.height()
         canvas.config(width=tempX, height=tempY)
-        canvas.create_image(tempX//2, tempY//2, image=tkImg)
+        canvas.create_image(tempX // 2, tempY // 2, image=tkImg)
 
     def ShowImageFromList(self, listbox, canvas):
         global imagesList, imagesDir
@@ -313,6 +312,7 @@ class App:
             return
         messages = string
         information = tk.StringVar()
+        print(string)
         self.messageLabel.configure(textvariable=information)
         status = MessageStatus(string)
         if(status[0] == 'ERROR'):
@@ -328,43 +328,45 @@ class App:
             self.messageLabel.configure(image="", fg="black")
         information.set(messages)
 
-    def ImagesConvert(self, listVar, canvas):
+    def ImagesConvert(self, event, listVar, canvas):
         global imagesList
         status = ImagesConvertToMobi()
+        event.widget.config(state=tk.NORMAL)
         if(status[1] == "CONVERT_SUCCESS"):
-            self.ShowMessage("DONE: '{}' {}".format(status[0], self.language[status[1]]))
+            self.ShowMessage(f"DONE: '{status[0]}' {self.language[status[1]]}")
         elif(status[1] == "NO_FILE_CONVERT"):
-            self.ShowMessage("ERROR: {}".format(self.language[status[1]]))
+            self.ShowMessage(f"ERROR: {self.language[status[1]]}")
         elif(status[1] == "UNABLE_OPEN"):
-            self.ShowMessage("ERROR: '{}' {}".format(status[0], self.language[status[1]]))
+            self.ShowMessage(f"ERROR: '{status[0]}' {self.language[status[1]]}")
         elif(status[1] == "NO_NAME_GIVEN"):
-            self.ShowMessage("WARN: '{}' {}".format(status[0], self.language[status[1]]))
+            self.ShowMessage(f"WARN: '{status[0]}' {self.language[status[1]]}")
         else:
-            self.ShowMessage("ERROR: '{}' {}".format(status[0], self.language[status[1]]))
+            self.ShowMessage(f"ERROR: '{status[0]}' {self.language[status[1]]}")
             raise Exception('Unexpect return!')
 
-    def TextConvert(self, entry):
+    def TextConvert(self, event, entry):
         if(entry.get() == self.language["PLEASE_CHOOSE_FILE"]):
-            self.ShowMessage("ERROR: {}".format(self.language["NO_FILE_CONVERT"]))
+            self.ShowMessage(f"ERROR: {self.language['NO_FILE_CONVERT']}")
             return None
         try:
             Image.open(self.temp["COVER"])
             status = ConvertToMobi(entry.get(), self.temp["COVER"])
         except Exception as e:
             if("COVER" in self.temp):
-                self.ShowMessage('ERROR: "{}" {}'.format(self.temp["COVER"], self.language["UNABLE_OPEN"]))
-                print(repr(e))
+                self.ShowMessage(f'ERROR: "{self.temp["COVER"]}" {self.language["UNABLE_OPEN"]}')
             status = ConvertToMobi(entry.get(), None)
+            print(repr(e))
+        event.widget.config(state=tk.NORMAL)
         if(len(status) != 2):
-            print("ERROR"+status)
+            self.ShowMessage("ERROR: " + repr(status))
         elif(status[0] is True):
-            self.ShowMessage("DONE: {} '{}'".format(self.language["CONVERT_SUCCESS"], status[1]))
-        elif(status[0] is False and status[1] in self.language):
-            self.ShowMessage("ERROR: {}".format(self.language[status[1]]))
+            self.ShowMessage(f"DONE: {self.language['CONVERT_SUCCESS']} {status[1]}")
+        elif(status[0] is False) and (status[1] in self.language):
+            self.ShowMessage(f"ERROR: {self.language[status[1]]}")
         elif(status[1] in self.language):
-            self.ShowMessage("ERROR: {} '{}'".format(self.language[status[1]], status[0]))
+            self.ShowMessage(f"ERROR: {self.language[status[1]]} {status[0]}")
         else:
-            print("ERROR"+status)
+            print("ERROR" + status)
 
     def Redo(self, listvariable):
         global imagesList
@@ -384,7 +386,8 @@ class App:
 
     def InitConfigure(self):
         self.temp = {}
-        self.cfg = {"Language": "en", "BgImagePath": os.path.join(runningPath, "images", "bgWater.jpg"),
+        self.cfg = {"Language": "en",
+                    "BgImagePath": os.path.join(runningPath, "images", "bgWater.jpg"),
                     "FontSize": 12}
         isWrite = False
         config = ConfigParser()
@@ -392,7 +395,6 @@ class App:
             config.read('config.ini')
         else:
             isWrite = True
-
         try:
             temp = config.get('settings', 'Language')
             lan = language2Long[temp]
@@ -406,11 +408,12 @@ class App:
         try:
             temp = config.get('settings', 'BgImagePath')
             if(not os.path.exists(temp)):
-                raise FileNotFoundError("Not found '{}'".format(temp))
+                raise FileNotFoundError(f"Not found '{temp}'")
+            Image.open(temp)
             self.cfg["BgImagePath"] = temp
         except Exception as e:
             if(not os.path.exists(self.cfg["BgImagePath"])):
-                print("Not found default background image ''{}'".format(self.cfg["BgImagePath"]))
+                print(f"Not found default background image '{self.cfg['BgImagePath']}'")
             isWrite = True
             print(repr(e))
 
@@ -446,9 +449,7 @@ class App:
         config['settings'] = self.cfg
         config.write(open('config.ini', 'w'))
         if(initial is False):
-            self.ShowMessage("DONE: "+self.language["RESTART_AFTER_CHANGE_CONFIG"])
-        # print("地"+sys.executable+ "地"+os.path.abspath(__file__)+"地；")
-        # Below is restart app
+            self.ShowMessage("DONE: " + self.language["RESTART_AFTER_CHANGE_CONFIG"])
         gettrace = getattr(sys, 'gettrace', None)
         if gettrace is None:
             pass
@@ -456,11 +457,12 @@ class App:
             print('Big Debugger is watching')
         else:
             x = sys.executable
-            p = '"{}"'.format(os.path.abspath(__file__))
+            p = f'"{os.path.abspath(__file__)}"'
             os.execl(x, x, p)
 
     def SetTextFile(self, event, filevariable):
         ChooseFile(filevariable, [("Supported format", ".pdf .epub .txt .doc .docx")])
+        event.widget.config(state=tk.NORMAL)
 
     def SetCover(self, event):
         imagePath = ChooseFile(None, [("Image Format", '.png .jpg .jpeg .gif .bmp .ico')])
@@ -499,7 +501,7 @@ def ImageRotate(filePath, degree, canvas):
         app.ShowImage(filePath, canvas)
     except Exception as e:
         print(repr(e))
-        raise IOError("Unable to open {}".format(filePath))
+        raise IOError(f"Unable to open {filePath}")
 
 
 def TkImgResize(filepath, size=(iconW, iconH), fill=False):
@@ -514,13 +516,13 @@ def TkImgResize(filepath, size=(iconW, iconH), fill=False):
     baseSize = pilImg.size
     if(baseSize[0] > size[0] or baseSize[1] > size[1]):
         if(fill is False):
-            ratio = max(baseSize[0]//size[0], baseSize[1]//size[1])
+            ratio = max(baseSize[0] // size[0], baseSize[1] // size[1])
         elif(baseSize[0] > size[0] and baseSize[1] > size[1]):
-            ratio = min(baseSize[0]//size[0], baseSize[1]//size[1])
+            ratio = min(baseSize[0] // size[0], baseSize[1] // size[1])
         else:
             return ImageTk.PhotoImage(pilImg)
         pilImgResized = pilImg.resize(
-            (baseSize[0]//ratio, baseSize[1]//ratio), Image.ANTIALIAS)
+            (baseSize[0] // ratio, baseSize[1] // ratio), Image.ANTIALIAS)
     else:
         return ImageTk.PhotoImage(pilImg)
     # convert PIL image object to Tkinter PhotoImage object
@@ -538,22 +540,19 @@ def ConvertToMobi(filePath, cover):
     if(saveName):
         if(not saveName.endswith(".mobi")):
             saveName = saveName + ".mobi"
-        saveName = '"{}"'.format(saveName)
-        filePath = '"{}"'.format(filePath)
-        call = '"{}"'.format(os.path.join(runningPath, "Calibre", "ebook-convert.exe"))
+        saveName = f'"{saveName}"'
+        filePath = f'"{filePath}"'
+        call = f'"{os.path.join(runningPath, "Calibre", "ebook-convert.exe")}"'
         if(cover is None):
-            subProcess = subprocess.Popen(call + ' ' +
-                                          filePath + ' ' + saveName)
+            subProcess = subprocess.Popen(f'{call} {filePath} {saveName}')
         else:
             try:
-                cover = '"{}"'.format(cover)
                 Image.open(cover)
-                subProcess = subprocess.Popen(call + ' ' +
-                                              filePath + ' ' + saveName + ' --cover ' + cover)
+                cover = f'"{cover}"'
+                subProcess = subprocess.Popen(f'{call} {filePath} {saveName} --cover {cover}')
             except Exception as e:
                 print(repr(e))
-                subProcess = subprocess.Popen(call + ' ' +
-                                              filePath + ' ' + saveName)
+                subProcess = subprocess.Popen(f'{call} {filePath} {saveName}')
         subProcess.wait()
         if (subProcess.returncode == 0):
             return [True, saveName]
@@ -569,7 +568,8 @@ def ImagesConvertToMobi():
         return [None, "NO_FILE_CONVERT"]
     imageOpenList = []
     try:
-        firstImage = Image.open(os.path.join(imagesDir, imagesList[0]))
+        firstPath = os.path.join(imagesDir, imagesList[0])
+        firstImage = Image.open(firstPath)
         firstImage.load()
     except Exception as e:
         print(repr(e))
@@ -594,12 +594,12 @@ def ImagesConvertToMobi():
     tempFile = '%s.pdf' % os.path.join(tempfile.gettempdir(), str(os.getpid()))
     firstImage.save(tempFile, "PDF", resolution=100.0,
                     save_all=True, append_images=imageOpenList)
-
-    # call = 'ebook-convert.exe'
-    # print('{} "{}" "{}"'.format(call, tempFile, fileName))
-    # os.system('"{}" "{}" "{}"'.format(call, tempFile, fileName))
-    # os.system(call + ' "' + tempFile + '"  "' + fileName + '"')
-    os.system('ebook-convert.exe' + ' "' + tempFile + '"  "' + fileName + '"')
+    call = f'"{os.path.join(runningPath, "Calibre", "ebook-convert.exe")}"'
+    tempFile
+    print(call + ' "' + tempFile + '"  "' + fileName + '" --cover "' + firstPath + '"')
+    print(f'{call} "{tempFile}" "{fileName}" --cover "{firstPath}"')
+    subprocess.Popen(f'{call} "{tempFile}" "{fileName}" --cover "{firstPath}"')
+    # subprocess.Popen(call + ' "' + tempFile + '"  "' + fileName + '" --cover "' + firstPath + '"')
     os.remove(tempFile)
     return [fileName, "CONVERT_SUCCESS"]
 
