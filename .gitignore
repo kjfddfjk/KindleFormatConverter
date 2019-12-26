@@ -3,6 +3,7 @@ modules/__pycache__/
 build/
 dist/
 test/Batman
+test/*.html
 test/temp/*.html
 __pycache__/
 Converter.spec

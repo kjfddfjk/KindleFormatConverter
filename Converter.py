@@ -498,7 +498,9 @@ def ImageRotate(filePath, degree, canvas):
         image = Image.open(filePath)
         rotated = image.rotate(degree, expand=True)
         rotated.save(filePath)
-        app.ShowImage(filePath, canvas)
+        if(app):
+            app.ShowImage(filePath, canvas)
+        return True
     except Exception as e:
         print(repr(e))
         raise IOError(f"Unable to open {filePath}")
@@ -553,7 +555,8 @@ def ConvertToMobi(filePath, cover):
             except Exception as e:
                 print(repr(e))
                 subProcess = subprocess.Popen(f'{call} {filePath} {saveName}')
-        app.ShowMessage(app.language["PLEASE_WAIT"])
+        if(app):
+            app.ShowMessage(app.language["PLEASE_WAIT"])
         subProcess.wait()
         if (subProcess.returncode == 0):
             return [True, saveName]
@@ -600,7 +603,8 @@ def ImagesConvertToMobi():
     print(call + ' "' + tempFile + '"  "' + fileName + '" --cover "' + firstPath + '"')
     print(f'{call} "{tempFile}" "{fileName}" --cover "{firstPath}"')
     sub = subprocess.Popen(f'{call} "{tempFile}" "{fileName}" --cover "{firstPath}"')
-    app.ShowMessage(app.language["PLEASE_WAIT"])
+    if(app):
+        app.ShowMessage(app.language["PLEASE_WAIT"])
     sub.wait()
     os.remove(tempFile)
     return [fileName, "CONVERT_SUCCESS"]

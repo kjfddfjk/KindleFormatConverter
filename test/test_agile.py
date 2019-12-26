@@ -1,4 +1,3 @@
-
 import os
 import tkinter
 import unittest
@@ -19,10 +18,12 @@ runningPath = os.path.split(os.path.realpath(__file__))[0]
 def initialWindow():
     pyautogui.FAILSAFE = True
     pyautogui.PAUSE = interval
-    window = pyautogui.getWindowsWithTitle("KinApp")[0]
-    window.moveTo(155, 54)
-    window = pyautogui.getWindowsWithTitle("ScreenToGif")[0]
-    window.moveTo(156, 23)
+    window = pyautogui.getWindowsWithTitle("KinApp")
+    if window:
+        window[0].moveTo(155, 54)
+    window = pyautogui.getWindowsWithTitle("ScreenToGif")
+    if window:
+        window[0].moveTo(156, 23)
 
 
 def startTk():
@@ -194,11 +195,33 @@ class UnitImageResize(unittest.TestCase):
 
 
 class UnitImageRotate(unittest.TestCase):
-    def test1Text_1(self):
-        pass
+    def test1_NoFile(self):
+        canvas = tkinter.Canvas()
+        try:
+            Converter.ImageRotate("", 90, None)
+            canvas.pack()
+        except Exception as e:
+            self.assertTrue(isinstance(e, IOError))
+            print(repr(e))
 
-    def test2(self):
-        pass
+    def test2_NotImage(self):
+        canvas = tkinter.Canvas()
+        try:
+            Converter.ImageRotate(os.path.join(runningPath, "failImage.jpg"), 90, canvas)
+            canvas.pack()
+        except Exception as e:
+            self.assertTrue(isinstance(e, IOError))
+            print(repr(e))
+
+    def test3_T(self):
+        canvas = tkinter.Canvas()
+        try:
+            result = Converter.ImageRotate(os.path.join(runningPath, "Batman", "RCO013_1549447449.jpg"), 90, canvas)
+            canvas.pack()
+        except Exception as e:
+            print(repr(e))
+        canvas.pack()
+        self.assertTrue(result)
 
 
 '''
