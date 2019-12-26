@@ -6,6 +6,8 @@ test/Batman
 test/temp/*.html
 __pycache__/
 Converter.spec
-ef.bmp
-config.ini
 *.mobi
+.pytest_cache/v/cache/nodeids
+.pytest_cache/v/cache/stepwise
+Pipfile
+Pipfile.lock
