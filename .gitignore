@@ -2,7 +2,6 @@ modules/__pycache__/
 .vscode/
 build/
 dist/
-test/Batman
 test/*.html
 test/temp/*.html
 __pycache__/
